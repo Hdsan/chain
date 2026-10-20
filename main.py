@@ -2,12 +2,14 @@
 import uvicorn
 import os
 import re
+
 from typing import Literal
 from typing_extensions import TypedDict
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 from dotenv import load_dotenv
 from cryptography.fernet import Fernet
+from typing import Annotated
 
 from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -16,6 +18,9 @@ from langchain_core.tools import tool
 from langgraph.graph import StateGraph, START, END
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.prebuilt import ToolNode, tools_condition
+
+from langgraph.graph.message import add_messages
+
 
 database = [
     {"code": "1123", "name": "farinha de trigo", "price": "12,00$"},
@@ -116,7 +121,7 @@ class TriageSchema(BaseModel):
 
 
 class AgentState(TypedDict):
-    messages: list         
+    messages: Annotated[list, add_messages]         
     chosen_route: str
     encrypted_cpf: bytes
 
@@ -174,14 +179,12 @@ economic_model_with_tools = economic_model.bind_tools(generalist_tools)
 
 def generalist_node(state: AgentState):
     try:
-        print("Generalist Node: Processing user message with tools...")
         response = economic_model_with_tools.invoke(state["messages"])
         return {"messages": [response]}
     except Exception as e:
       print("ERRO:",e)
 
 def specialist_node(state: AgentState):
-    print("Specialist Node: Processing user message with store rules...")
     last_user_message = state["messages"][-1].content
     store_context = search_rules.invoke(last_user_message)
     

@@ -128,7 +128,6 @@ class AgentState(TypedDict):
 
 economic_model = ChatGoogleGenerativeAI(
     model="gemini-3.5-flash-lite",  
-    temperature=0,
     google_api_key=api_key
 )
 
@@ -201,7 +200,6 @@ def specialist_node(state: AgentState):
 
 
 def conditional_router(state: AgentState) -> Literal["generalist", "specialist"]:
-    # Ajustado para retornar exatamente o nome dos nós cadastrados
     if state.get("chosen_route") == "specialist":
         return "specialist"
     return "generalist"
@@ -218,7 +216,6 @@ builder.add_node("tools_generalist", ToolNode(generalist_tools))
 builder.add_edge(START, "security")
 builder.add_edge("security", "triage")
 
-# Roteamento condicional corrigido com os nomes exatos
 builder.add_conditional_edges(
     "triage",
     conditional_router,
@@ -228,14 +225,11 @@ builder.add_conditional_edges(
     }
 )
 
-# Se o generalista pedir ferramenta, vai para 'tools_generalist'. Se responder em texto, vai para END.
 builder.add_conditional_edges(
     "generalist", 
     tools_condition, 
     {"tools": "tools_generalist", END: END}
 )
-
-# Após rodar a ferramenta, o fluxo retorna para o generalista processar o resultado e responder
 builder.add_edge("tools_generalist", "generalist") 
 
 builder.add_edge("generalist", END)
